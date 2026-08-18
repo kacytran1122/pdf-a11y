@@ -1,6 +1,6 @@
 {
   "name": "pdf-a11y",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Accessibility checker for generated PDFs. Verifies tag tree, alt text, language, table headers and reading structure so PDFs from pdfkit or puppeteer are usable by a screen reader.",
   "keywords": [
     "pdf",
@@ -38,34 +38,64 @@
       }
     },
     "./browser": {
-      "types": "./dist/core.d.ts",
-      "default": "./dist/core.js"
+      "import": {
+        "types": "./dist/core.d.ts",
+        "default": "./dist/core.js"
+      },
+      "require": {
+        "types": "./dist/core.d.cts",
+        "default": "./dist/core.cjs"
+      }
     },
     "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "browser": [
+        "./dist/core.d.ts"
+      ]
+    }
   },
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "prepack": "npm run build",
-    "lint:self": "npm run typecheck && npm test"
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "package:check": "publint && attw --pack .",
+    "bench": "node --expose-gc bench/run.mjs",
+    "bench:analyse": "node bench/analyse.mjs .bench-current/analyse.mjs",
+    "bench:cli": "node bench/cli.mjs",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run package:check",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.0",
+    "@eslint/js": "^9.0.0",
     "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.2.7",
+    "eslint": "^9.0.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.0.0",
+    "publint": "^0.3.0",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.2.7"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18.18"
   },
   "author": "Kacy Tran (https://github.com/kacytran1122)",
   "repository": {
@@ -78,6 +108,7 @@
   "homepage": "https://github.com/kacytran1122/pdf-a11y#readme",
   "sideEffects": false,
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   }
 }

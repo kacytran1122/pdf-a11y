@@ -2,4 +2,11 @@ node_modules
 dist
 coverage
 *.log
+*.tgz
 .DS_Store
+
+# Local benchmark scratch: a snapshot of a previous build and the bundles used
+# to compare the analysis stage against it.
+.baseline-dist
+.bench-baseline
+.bench-current

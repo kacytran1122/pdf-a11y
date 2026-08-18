@@ -11,17 +11,41 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
           cache: npm
+
       - run: npm ci
+
+      - name: The tag must match the version in package.json
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version." >&2
+            exit 1
+          fi
+
+      - name: The changelog must mention this version
+        run: grep -q "## $(node -p "require('./package.json').version")" CHANGELOG.md
+
+      # The same gates as CI. A tag must not be able to publish something that
+      # would have failed a pull request.
+      - run: npm run format:check
+      - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
-      # prepack builds. --provenance only works here, in CI with OIDC.
+      - run: npm run build
+      - run: npm run test:coverage
+      - run: npm run package:check
+      - run: npm audit --omit=dev --audit-level=low
+
+      # prepack rebuilds. --provenance needs OIDC, which only exists here.
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
