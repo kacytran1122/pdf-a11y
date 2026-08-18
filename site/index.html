@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pdf-a11y — check whether your generated PDFs can actually be read</title>
+<meta name="description" content="pdfkit and puppeteer produce untagged PDFs by default. A screen reader announces them as one unbroken blob. pdf-a11y runs 12 checks in CI, mapped to PDF/UA and WCAG.">
+<meta name="theme-color" content="#EFEFEA">
+<meta property="og:type" content="website">
+<meta property="og:title" content="pdf-a11y — check whether your generated PDFs can actually be read">
+<meta property="og:description" content="Every invoice your service emails out is probably unreadable to a screen reader. 12 checks, one command, no Java.">
+<meta property="og:url" content="https://pdf-a11y.dev/">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EFEFEA;
+  --paper-2:#E6E6DF;
+  --card:#FBFBF8;
+  --ink:#16181C;
+  --ink-2:#4A4E56;
+  --muted:#7E838C;
+  --rule:#CFCFC5;
+  --rule-2:#DEDED5;
+  --tag:#0F5C4A;
+  --fail:#B92D22;
+  --warn:#9A6400;
+  --stamp:#B92D22;
+
+  --display:"Archivo",system-ui,sans-serif;
+  --body:"Archivo",system-ui,sans-serif;
+  --doc:"Fraunces",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+
+  --gutter:clamp(20px,5vw,64px);
+  --maxw:1180px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--body);font-size:17px;line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:-.03em;line-height:1.04;margin:0}
+p{margin:0}
+a{color:inherit}
+code,pre,.mono{font-family:var(--mono)}
+:focus-visible{outline:2px solid var(--tag);outline-offset:3px;border-radius:2px}
+
+.wrap{max-width:var(--maxw);margin-inline:auto;padding-inline:var(--gutter)}
+.section{padding-block:clamp(60px,8.5vw,112px);border-top:1px solid var(--rule)}
+.eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--tag);margin-bottom:20px;display:flex;align-items:center;gap:10px;
+}
+.eyebrow::before{content:"";width:24px;height:1px;background:var(--tag)}
+.lede{color:var(--ink-2);font-size:clamp(17px,1.5vw,19px);max-width:62ch;margin-top:18px}
+
+/* ---------- nav ---------- */
+header{position:sticky;top:0;z-index:50;background:rgba(239,239,234,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--rule)}
+.nav{display:flex;align-items:center;gap:26px;height:62px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.02em;text-decoration:none}
+.mark{width:20px;height:24px;flex:none}
+.nav-links{display:flex;gap:22px;margin-left:auto;align-items:center}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500}
+.nav-links a:hover{color:var(--ink)}
+.nav-cta{border:1px solid var(--ink);padding:7px 14px;border-radius:2px;color:var(--ink)!important}
+.nav-cta:hover{background:var(--ink);color:var(--paper)!important}
+@media(max-width:880px){.nav-links a:not(.nav-cta){display:none}}
+
+/* ---------- hero ---------- */
+.hero{padding-block:clamp(52px,7vw,96px) clamp(36px,4vw,56px)}
+.hero h1{font-size:clamp(38px,6.6vw,74px)}
+.hero h1 em{font-family:var(--doc);font-style:italic;font-weight:600;letter-spacing:-.02em}
+.deadline{
+  display:inline-flex;align-items:center;gap:10px;border:1px solid var(--fail);
+  color:var(--fail);border-radius:2px;padding:6px 12px;margin-bottom:24px;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+}
+.hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:2px;font-weight:600;font-size:15px;text-decoration:none;border:1px solid var(--ink)}
+.btn-primary{background:var(--ink);color:var(--paper)}
+.btn-primary:hover{background:var(--tag);border-color:var(--tag)}
+.btn-ghost{background:transparent}
+.btn-ghost:hover{background:var(--paper-2)}
+.install{
+  margin-top:24px;display:inline-flex;align-items:center;gap:14px;background:var(--card);
+  border:1px solid var(--rule);border-radius:2px;padding:11px 16px;font-family:var(--mono);font-size:14px;color:var(--muted);
+}
+.install b{color:var(--ink);font-weight:500}
+.copy-btn{background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;font-family:var(--mono);font-size:11px;padding:4px 9px;border-radius:2px}
+.copy-btn:hover{color:var(--ink);border-color:var(--ink)}
+
+/* ---------- signature: reader panel ---------- */
+.reader{margin-top:clamp(38px,5.5vw,62px);border:1px solid var(--ink);background:var(--card)}
+.reader-head{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--ink);background:var(--paper-2)}
+.reader-title{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+.toggle{display:flex;border:1px solid var(--ink);border-radius:2px;overflow:hidden;margin-left:auto}
+.toggle button{
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;
+  padding:7px 14px;background:transparent;border:none;cursor:pointer;color:var(--ink-2);
+}
+.toggle button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.toggle button+button{border-left:1px solid var(--ink)}
+
+.reader-body{display:grid;grid-template-columns:1fr 1fr}
+@media(max-width:900px){.reader-body{grid-template-columns:1fr}}
+.pane{padding:26px 22px;min-width:0}
+.pane+.pane{border-left:1px solid var(--rule)}
+@media(max-width:900px){.pane+.pane{border-left:none;border-top:1px solid var(--rule)}}
+.pane-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+
+/* the specimen invoice, set in the serif so it reads as a document */
+.doc{font-family:var(--doc);background:#fff;border:1px solid var(--rule);padding:26px 24px;position:relative}
+.doc-h{font-size:23px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
+.doc-meta{font-family:var(--body);font-size:12.5px;color:var(--muted);margin-bottom:18px}
+.doc table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+.doc th{text-align:left;font-weight:700;border-bottom:1.5px solid var(--ink);padding:7px 0}
+.doc td{padding:7px 0;border-bottom:1px solid var(--rule-2)}
+.doc td:last-child,.doc th:last-child{text-align:right}
+.doc-total{display:flex;justify-content:space-between;font-weight:700;margin-top:14px;font-size:15px}
+.stamp{
+  position:absolute;top:14px;right:14px;border:2px solid var(--stamp);color:var(--stamp);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;padding:4px 8px;transform:rotate(-7deg);
+  text-transform:uppercase;font-weight:700;
+}
+.stamp.ok{border-color:var(--tag);color:var(--tag)}
+
+.speech{
+  background:var(--paper-2);border:1px solid var(--rule);padding:22px;font-size:15.5px;line-height:1.85;
+  min-height:210px;
+}
+.speech .ann{
+  display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--tag);margin-bottom:3px;
+}
+.speech .blob{color:var(--ink-2);font-family:var(--doc);font-size:16px}
+.speech .row{padding:9px 0;border-bottom:1px dashed var(--rule)}
+.speech .row:last-child{border-bottom:none}
+.reader-foot{border-top:1px solid var(--rule);padding:14px 22px;font-size:13.5px;color:var(--ink-2);background:var(--paper-2)}
+.reader-foot b{color:var(--fail)}
+.reader-foot b.good{color:var(--tag)}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);border-block:1px solid var(--rule)}
+@media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--paper);padding:26px var(--gutter)}
+.stat .n{font-family:var(--doc);font-size:clamp(28px,4vw,40px);font-weight:700;letter-spacing:-.02em;line-height:1}
+.stat .l{font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-top:9px}
+
+/* ---------- terminal ---------- */
+.term{background:var(--ink);color:#E7E7DF;border-radius:3px;padding:22px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.75;margin-top:32px}
+.term .p{color:#8A8F98}
+.term .err{color:#FF8177}
+.term .wrn{color:#F0B429}
+.term .ok{color:#5FCFA8}
+.term .meta{color:#787D86}
+
+/* ---------- checks table ---------- */
+.table-scroll{overflow-x:auto;margin-top:36px;border:1px solid var(--rule);background:var(--card)}
+table.checks{border-collapse:collapse;width:100%;min-width:760px;font-size:14.5px}
+table.checks th,table.checks td{text-align:left;padding:14px 18px;border-bottom:1px solid var(--rule-2)}
+table.checks thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:var(--paper-2);font-weight:500}
+table.checks tbody tr:last-child td{border-bottom:none}
+table.checks td.id{font-family:var(--mono);font-size:13px;white-space:nowrap}
+.pill{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:2px}
+.pill.error{color:var(--fail);background:rgba(185,45,34,.09)}
+.pill.warn{color:var(--warn);background:rgba(154,100,0,.1)}
+td.clause{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* ---------- law ---------- */
+.law{display:grid;grid-template-columns:1fr 1fr;gap:38px;margin-top:36px}
+@media(max-width:880px){.law{grid-template-columns:1fr}}
+.timeline{list-style:none;margin:0;padding:0;border-left:2px solid var(--rule)}
+.timeline li{padding:0 0 26px 22px;position:relative}
+.timeline li::before{content:"";position:absolute;left:-7px;top:8px;width:12px;height:12px;border-radius:50%;background:var(--paper);border:2px solid var(--tag)}
+.timeline li:last-child::before{border-color:var(--fail);background:var(--fail)}
+.timeline .when{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.timeline .what{font-weight:600;margin-top:3px}
+.timeline .note{color:var(--ink-2);font-size:14.5px;margin-top:3px}
+
+/* ---------- modes ---------- */
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:38px}
+@media(max-width:940px){.modes{grid-template-columns:1fr}}
+.mode{border:1px solid var(--rule);background:var(--card);padding:24px;display:flex;flex-direction:column;gap:14px}
+.mode-tag{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--tag)}
+.mode h3{font-size:20px;letter-spacing:-.02em}
+.mode p{color:var(--ink-2);font-size:14.5px}
+.mode pre{margin:0;margin-top:auto;background:var(--ink);color:#E7E7DF;padding:15px;border-radius:3px;font-size:12.5px;overflow-x:auto;line-height:1.7}
+
+/* ---------- limits ---------- */
+.limits{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:34px}
+.limit{background:var(--card);padding:24px}
+.limit h4{font-family:var(--doc);font-size:18px;font-weight:600;margin:0 0 8px;letter-spacing:-.01em}
+.limit p{color:var(--ink-2);font-size:14.5px}
+
+/* ---------- cta / footer ---------- */
+.cta{text-align:center;padding-block:clamp(66px,9vw,116px)}
+.cta h2{font-size:clamp(32px,5.2vw,54px)}
+.cta .lede{margin-inline:auto}
+.cta .hero-actions{justify-content:center}
+footer{border-top:1px solid var(--rule);padding-block:50px;color:var(--muted);font-size:14px;background:var(--paper-2)}
+.foot-grid{display:grid;grid-template-columns:1.6fr repeat(2,1fr);gap:34px}
+@media(max-width:780px){.foot-grid{grid-template-columns:1fr 1fr}}
+footer h5{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin:0 0 14px;font-weight:500}
+footer ul{list-style:none;padding:0;margin:0;display:grid;gap:9px}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--ink)}
+.foot-bottom{margin-top:42px;padding-top:22px;border-top:1px solid var(--rule);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-family:var(--mono);font-size:11.5px}
+
+.reveal{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s ease}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      <svg class="mark" viewBox="0 0 20 24" fill="none" aria-hidden="true">
+        <path d="M2 1h11l5 5v17H2z" stroke="#16181C" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M13 1v5h5" stroke="#16181C" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M6 12h8M6 16h8M6 20h5" stroke="#0F5C4A" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      pdf-a11y
+    </a>
+    <nav class="nav-links">
+      <a href="#reader">The demo</a>
+      <a href="#law">Why now</a>
+      <a href="#checks">Checks</a>
+      <a href="#run">Install</a>
+      <a href="https://github.com/kacytran1122/pdf-a11y">GitHub</a>
+      <a class="nav-cta" href="https://www.npmjs.com/package/pdf-a11y">npm</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="wrap hero">
+  <div class="deadline">Enforceable across the EU since 28 June 2025</div>
+  <h1>Every invoice you<br>generate is <em>one long<br>unbroken sentence.</em></h1>
+  <p class="lede">
+    pdfkit and puppeteer both produce untagged PDFs by default. An untagged PDF has no headings, no
+    table structure and no reading order, so a screen reader announces the whole page as a single
+    blob of text. Amounts drift away from their labels. Column headers disappear.
+  </p>
+  <p class="lede">
+    Your web app has axe-core in CI. Your PDFs have had nothing. This is that check.
+  </p>
+
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="#run">Check your PDFs</a>
+    <a class="btn btn-ghost" href="https://github.com/kacytran1122/pdf-a11y">Read the source</a>
+  </div>
+
+  <div class="install">
+    <span>$</span><b id="install-cmd">npx pdf-a11y invoice.pdf</b>
+    <button class="copy-btn" id="copy" type="button">copy</button>
+  </div>
+
+  <!-- ---------- SIGNATURE: what a screen reader hears ---------- -->
+  <div class="reader" id="reader">
+    <div class="reader-head">
+      <span class="reader-title">The same invoice, read two ways</span>
+      <div class="toggle" role="group" aria-label="Choose which version of the document to inspect">
+        <button type="button" id="btn-bad" aria-pressed="true">Untagged</button>
+        <button type="button" id="btn-good" aria-pressed="false">Tagged</button>
+      </div>
+    </div>
+
+    <div class="reader-body">
+      <div class="pane">
+        <div class="pane-label">What a sighted reader sees</div>
+        <div class="doc">
+          <div class="stamp" id="stamp">Untagged</div>
+          <div class="doc-h">Invoice 2026-0142</div>
+          <div class="doc-meta">Cyra Labs · Due 30 September 2026</div>
+          <table>
+            <tr><th>Item</th><th>Qty</th><th>Amount</th></tr>
+            <tr><td>Design retainer</td><td>1</td><td>32,000,000 ₫</td></tr>
+            <tr><td>Accessibility audit</td><td>2</td><td>18,000,000 ₫</td></tr>
+          </table>
+          <div class="doc-total"><span>Total due</span><span>50,000,000 ₫</span></div>
+        </div>
+        <p style="font-size:13.5px;color:var(--muted);margin-top:14px">
+          Identical on screen and identical when printed. The difference is entirely in the object
+          graph underneath.
+        </p>
+      </div>
+
+      <div class="pane">
+        <div class="pane-label">What a screen reader announces</div>
+        <div class="speech" id="speech"></div>
+      </div>
+    </div>
+
+    <div class="reader-foot" id="reader-foot"></div>
+  </div>
+</section>
+
+<!-- ============ STATS ============ -->
+<section class="stats">
+  <div class="stat"><div class="n">12</div><div class="l">Checks</div></div>
+  <div class="stat"><div class="n">70M</div><div class="l">Monthly pdfkit + puppeteer installs</div></div>
+  <div class="stat"><div class="n">0</div><div class="l">Java runtimes needed</div></div>
+  <div class="stat"><div class="n">MIT</div><div class="l">Open source</div></div>
+</section>
+
+<!-- ============ TERMINAL ============ -->
+<section class="wrap section">
+  <div class="eyebrow reveal">One command</div>
+  <h2 class="reveal" style="font-size:clamp(28px,4.4vw,46px)">This is a real pdfkit<br>invoice, out of the box.</h2>
+  <p class="lede reveal">
+    Nothing was sabotaged to make this output. Ten lines of ordinary pdfkit produce a document with
+    no structure tree and no language. This is the starting point for almost every Node service that
+    emails a PDF.
+  </p>
+
+  <pre class="term reveal"><span class="p">$</span> npx pdf-a11y invoice.pdf
+
+<b>invoice.pdf</b>
+  <span class="meta">1 page  ·  untagged  ·  no lang  ·  0 images</span>
+  <span class="meta">doc</span>    <span class="err">error</span>  No structure tree. A screen reader reads this document as one
+                undifferentiated blob with no headings, lists or tables.
+                <span class="meta">struct-tree  PDF/UA 7.1, WCAG 1.3.1</span>
+  <span class="meta">doc</span>    <span class="err">error</span>  No document language is set. A screen reader will fall back to
+                its own language and mispronounce the text.
+                <span class="meta">document-lang  WCAG 3.1.1</span>
+  <span class="meta">doc</span>    <span class="wrn">warn </span>  No document title. Assistive technology announces the file name
+                instead, which is usually a generated string.
+                <span class="meta">document-title  WCAG 2.4.2</span>
+  <span class="meta">doc</span>    <span class="wrn">warn </span>  MarkInfo/Marked is not set to true, so the document does not
+                declare itself as tagged.
+                <span class="meta">marked-content  PDF/UA 7.1</span>
+
+<span class="err">2 errors, 2 warnings</span>
+<span class="p">$</span> echo $?
+1</pre>
+</section>
+
+<!-- ============ LAW ============ -->
+<section class="wrap section" id="law">
+  <div class="eyebrow reveal">Why this became urgent</div>
+  <h2 class="reveal" style="font-size:clamp(28px,4.4vw,46px)">Accessible documents<br>stopped being optional.</h2>
+
+  <div class="law">
+    <div>
+      <p class="lede reveal" style="margin-top:0">
+        The European Accessibility Act has applied since 28 June 2025. It reaches customer facing
+        documents such as invoices, statements, contracts and reports for a wide range of services
+        sold into the EU. Each member state sets its own penalties and its own enforcement body.
+      </p>
+      <p class="lede reveal">
+        The practical problem is not the law. It is that teams had no way to check. Web accessibility
+        has had automated tooling for a decade. PDF accessibility had desktop software, paid
+        services, and Java command line tools, none of which fit into a Node build.
+      </p>
+      <p class="lede reveal">
+        This runs with <code>npx</code>. No installer, no licence, no Java.
+      </p>
+    </div>
+    <ul class="timeline reveal">
+      <li>
+        <div class="when">2001</div>
+        <div class="what">Tagged PDF arrives in PDF 1.4</div>
+        <div class="note">The structure tree has existed for over twenty years. Most generators still do not emit one.</div>
+      </li>
+      <li>
+        <div class="when">2012</div>
+        <div class="what">PDF/UA published as ISO 14289-1</div>
+        <div class="note">A precise definition of what an accessible PDF has to contain.</div>
+      </li>
+      <li>
+        <div class="when">28 June 2025</div>
+        <div class="what">European Accessibility Act applies</div>
+        <div class="note">Requirements reach customer facing documents, not just websites.</div>
+      </li>
+      <li>
+        <div class="when">Today</div>
+        <div class="what">Your invoice pipeline has no check</div>
+        <div class="note">One line in CI closes it.</div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ CHECKS ============ -->
+<section class="wrap section" id="checks">
+  <div class="eyebrow reveal">Twelve checks</div>
+  <h2 class="reveal" style="font-size:clamp(28px,4.4vw,46px)">Every finding points at<br>a published clause.</h2>
+  <p class="lede reveal">
+    Two profiles. <code>recommended</code> is what a team can reasonably fix this sprint.
+    <code>pdf-ua</code> turns everything into an error. Any check can be turned off on its own.
+  </p>
+
+  <div class="table-scroll reveal">
+    <table class="checks">
+      <thead>
+        <tr><th>Check</th><th>Default</th><th>Clause</th><th>What it catches</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="id">struct-tree</td><td><span class="pill error">error</span></td><td class="clause">PDF/UA 7.1 · WCAG 1.3.1</td><td>No tag tree at all. The one that matters most.</td></tr>
+        <tr><td class="id">document-lang</td><td><span class="pill error">error</span></td><td class="clause">WCAG 3.1.1</td><td>Missing or malformed <code>/Lang</code>, so the reader guesses the language</td></tr>
+        <tr><td class="id">figure-alt</td><td><span class="pill error">error</span></td><td class="clause">PDF/UA 7.3 · WCAG 1.1.1</td><td>Figure with no alt text, or alt text like <code>image</code> or <code>chart.png</code></td></tr>
+        <tr><td class="id">table-headers</td><td><span class="pill error">error</span></td><td class="clause">PDF/UA 7.5 · WCAG 1.3.1</td><td>Table with data cells but no header cells, so values lose their column</td></tr>
+        <tr><td class="id">form-field-label</td><td><span class="pill error">error</span></td><td class="clause">PDF/UA 7.18.4</td><td>Form field with no <code>/TU</code> tooltip, which is its accessible name</td></tr>
+        <tr><td class="id">marked-content</td><td><span class="pill warn">warn</span></td><td class="clause">PDF/UA 7.1</td><td><code>MarkInfo/Marked</code> not set to true</td></tr>
+        <tr><td class="id">document-title</td><td><span class="pill warn">warn</span></td><td class="clause">WCAG 2.4.2</td><td>No title, or a title viewers will not display</td></tr>
+        <tr><td class="id">untagged-image</td><td><span class="pill warn">warn</span></td><td class="clause">WCAG 1.1.1</td><td>More images on the page than Figure elements in the tree</td></tr>
+        <tr><td class="id">heading-order</td><td><span class="pill warn">warn</span></td><td class="clause">WCAG 1.3.1</td><td>Heading levels skip, or the document does not start at H1</td></tr>
+        <tr><td class="id">link-alt</td><td><span class="pill warn">warn</span></td><td class="clause">PDF/UA 7.18.5</td><td>Link annotation with no description of where it goes</td></tr>
+        <tr><td class="id">tab-order</td><td><span class="pill warn">warn</span></td><td class="clause">PDF/UA 7.18.3</td><td>Page has annotations but no <code>/Tabs /S</code>, so keyboard order is arbitrary</td></tr>
+        <tr><td class="id">extraction-allowed</td><td><span class="pill warn">warn</span></td><td class="clause">PDF/UA 7.1</td><td>Encryption that may block assistive technology from reading anything</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ FACTS ============ -->
+<section class="wrap section">
+  <div class="eyebrow reveal">Beyond pass and fail</div>
+  <h2 class="reveal" style="font-size:clamp(26px,4vw,42px);max-width:22ch">It also tells you what your generator is really emitting.</h2>
+  <p class="lede reveal">
+    Every report carries a <code>facts</code> object, including a count of every structure tag in the
+    document. This is usually the most useful part. Authors are often surprised to learn their
+    template produces two hundred paragraphs and not a single heading.
+  </p>
+  <pre class="term reveal">{
+  <span class="ok">"pages"</span>: 4,
+  <span class="ok">"tagged"</span>: true,
+  <span class="ok">"lang"</span>: <span class="wrn">"vi"</span>,
+  <span class="ok">"title"</span>: <span class="wrn">"Hóa đơn 2026-0142"</span>,
+  <span class="ok">"images"</span>: 3,
+  <span class="ok">"figures"</span>: 1,          <span class="meta">// two images never made it into the tree</span>
+  <span class="ok">"tags"</span>: { <span class="wrn">"P"</span>: 212, <span class="wrn">"Table"</span>: 2, <span class="wrn">"TD"</span>: 48, <span class="wrn">"Figure"</span>: 1 }
+}                              <span class="meta">// no H1, no TH: the structure is flat</span></pre>
+</section>
+
+<!-- ============ RUN ============ -->
+<section class="wrap section" id="run">
+  <div class="eyebrow reveal">Three ways to run it</div>
+  <h2 class="reveal" style="font-size:clamp(28px,4.4vw,46px)">Check the file, the folder,<br>or the buffer.</h2>
+
+  <div class="modes">
+    <div class="mode reveal">
+      <span class="mode-tag">One</span>
+      <h3>On a file you already have</h3>
+      <p>Point it at a PDF or a folder of them. Exit code is 1 when there is an error, so it works as a gate anywhere you can run a command.</p>
+      <pre>npx pdf-a11y invoice.pdf
+
+npx pdf-a11y ./out --profile pdf-ua</pre>
+    </div>
+
+    <div class="mode reveal">
+      <span class="mode-tag">Two ★</span>
+      <h3>In CI, on what you ship</h3>
+      <p>Generate the PDFs your service actually sends, then check those. The github format puts each finding on the pull request.</p>
+      <pre>- run: node scripts/invoices.js
+- run: npx pdf-a11y ./out \
+    --format github</pre>
+    </div>
+
+    <div class="mode reveal">
+      <span class="mode-tag">Three</span>
+      <h3>Before it touches disk</h3>
+      <p>checkPdf takes a Uint8Array, so a puppeteer buffer can be checked in the same function that made it. Read errors come back on the result instead of throwing.</p>
+      <pre>const bytes = await page.pdf();
+const report = await checkPdf(bytes);
+
+if (report.errorCount > 0) {
+  throw new Error("not accessible");
+}</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LIMITS ============ -->
+<section class="wrap section">
+  <div class="eyebrow reveal">What it cannot do</div>
+  <h2 class="reveal" style="font-size:clamp(28px,4.4vw,46px)">A checker is only trustworthy<br>if it says where it stops.</h2>
+  <p class="lede reveal">
+    No automated tool can certify a PDF as accessible, and any tool that claims otherwise is selling
+    you something. These are the edges, stated plainly.
+  </p>
+
+  <div class="limits">
+    <div class="limit reveal">
+      <h4>Reading order</h4>
+      <p>It can tell you an order exists. It cannot tell you the order makes sense. A tag tree in the wrong sequence still passes.</p>
+    </div>
+    <div class="limit reveal">
+      <h4>Alt text quality</h4>
+      <p>It catches the mechanical failures: empty, whitespace, a file name, or a placeholder word. Whether a real sentence describes the image well needs a person.</p>
+    </div>
+    <div class="limit reveal">
+      <h4>Colour contrast</h4>
+      <p>Out of scope. Contrast needs the rendered page, and this reads the object graph.</p>
+    </div>
+    <div class="limit reveal">
+      <h4>Repair</h4>
+      <p>It reports, it does not rewrite. Fixing means changing the generator, which is where the structure has to come from anyway.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="wrap cta">
+  <h2>Find out what your<br>invoices actually say.</h2>
+  <p class="lede">One command, on a PDF you already have. It takes about four seconds.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="https://www.npmjs.com/package/pdf-a11y">Get it from npm</a>
+    <a class="btn btn-ghost" href="https://github.com/kacytran1122/pdf-a11y">Star on GitHub</a>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="#top" style="margin-bottom:14px">
+          <svg class="mark" viewBox="0 0 20 24" fill="none" aria-hidden="true">
+            <path d="M2 1h11l5 5v17H2z" stroke="#16181C" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M13 1v5h5" stroke="#16181C" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M6 12h8M6 16h8M6 20h5" stroke="#0F5C4A" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          pdf-a11y
+        </a>
+        <p style="max-width:38ch">Accessibility checking for the PDFs your code generates, in the build where you can still do something about it.</p>
+      </div>
+      <div>
+        <h5>Package</h5>
+        <ul>
+          <li><a href="https://www.npmjs.com/package/pdf-a11y">npm</a></li>
+          <li><a href="https://github.com/kacytran1122/pdf-a11y">GitHub</a></li>
+          <li><a href="#checks">All 12 checks</a></li>
+          <li><a href="#run">Install</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Related</h5>
+        <ul>
+          <li><a href="https://www.npmjs.com/package/motion-a11y">motion-a11y</a></li>
+          <li><a href="https://www.npmjs.com/package/axe-core">axe-core</a></li>
+          <li><a href="https://www.npmjs.com/package/pdfkit">pdfkit</a></li>
+          <li><a href="https://www.npmjs.com/package/pdf-lib">pdf-lib</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 pdf-a11y · MIT</span>
+      <span>Not legal advice. Talk to your compliance team about the EAA.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var copyBtn = document.getElementById("copy");
+  copyBtn.addEventListener("click", function () {
+    navigator.clipboard.writeText(document.getElementById("install-cmd").textContent).then(function () {
+      copyBtn.textContent = "copied";
+      setTimeout(function () { copyBtn.textContent = "copy"; }, 1600);
+    });
+  });
+
+  // ---- the two readings of the same invoice ----
+  var speech = document.getElementById("speech");
+  var stamp = document.getElementById("stamp");
+  var foot = document.getElementById("reader-foot");
+  var btnBad = document.getElementById("btn-bad");
+  var btnGood = document.getElementById("btn-good");
+
+  var UNTAGGED =
+    '<span class="ann">Announced as one continuous run of text</span>' +
+    '<span class="blob">Invoice 2026-0142 Cyra Labs Due 30 September 2026 Item Qty Amount ' +
+    'Design retainer 1 32,000,000 ₫ Accessibility audit 2 18,000,000 ₫ Total due 50,000,000 ₫</span>';
+
+  var TAGGED = [
+    ["Heading level 1", "Invoice 2026-0142"],
+    ["Paragraph", "Cyra Labs. Due 30 September 2026."],
+    ["Table, 3 columns, 3 rows", "Row 2. Item: Design retainer. Qty: 1. Amount: 32,000,000 đồng."],
+    ["Same table, row 3", "Item: Accessibility audit. Qty: 2. Amount: 18,000,000 đồng."],
+    ["Paragraph", "Total due, 50,000,000 đồng."]
+  ].map(function (row) {
+    return '<div class="row"><span class="ann">' + row[0] + '</span>' + row[1] + "</div>";
+  }).join("");
+
+  function show(tagged) {
+    btnBad.setAttribute("aria-pressed", String(!tagged));
+    btnGood.setAttribute("aria-pressed", String(tagged));
+    speech.innerHTML = tagged ? TAGGED : UNTAGGED;
+    stamp.textContent = tagged ? "Tagged" : "Untagged";
+    stamp.className = tagged ? "stamp ok" : "stamp";
+    foot.innerHTML = tagged
+      ? 'Same pixels, same file size, same print output. The reader now knows that 32,000,000 ₫ is an <b class="good">Amount</b> belonging to a <b class="good">Design retainer</b>.'
+      : 'The numbers are still read out. Nothing tells the listener <b>which number belongs to which line</b>, or that the heading was a heading.';
+  }
+
+  btnBad.addEventListener("click", function () { show(false); });
+  btnGood.addEventListener("click", function () { show(true); });
+  show(false);
+
+  // ---- scroll reveal ----
+  var revealables = document.querySelectorAll(".reveal");
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    revealables.forEach(function (el) { el.classList.add("in"); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in");
+          io.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.05 });
+    revealables.forEach(function (el) { io.observe(el); });
+  }
+
+  document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+    link.addEventListener("click", function (event) {
+      var target = document.querySelector(link.getAttribute("href"));
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
+  });
+})();
+</script>
+</body>
+</html>
