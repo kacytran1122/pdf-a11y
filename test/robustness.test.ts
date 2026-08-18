@@ -12,13 +12,17 @@ import {
 } from "./fixtures.js";
 
 describe("hostile and damaged files", () => {
+  // Building and parsing a 20,000 object document is genuinely slow — about a
+  // second here, several times that on a shared CI runner under coverage — so
+  // it gets a real budget rather than the 5s default. The assertion is
+  // unchanged: the old recursive reader threw a RangeError here.
   it("reads a structure tree nested 20000 deep without blowing the stack", async () => {
     const report = await checkPdf(await makeDeepPdf(20_000));
     expect(report.readError).toBeUndefined();
     expect(report.facts.tagged).toBe(true);
     expect(report.facts.tags.Div).toBe(20_000);
     expect(report.limitations).toEqual([]);
-  });
+  }, 30_000);
 
   it("terminates on a structure tree that points back at itself", async () => {
     const report = await checkPdf(await makeCyclicPdf());
@@ -126,8 +130,11 @@ describe("the library's effect on its host", () => {
   });
 
   it("does not read an unbounded amount of highly compressible metadata", async () => {
-    // 8 MB of one repeated character compresses to a few kilobytes. Decoding it
-    // whole before checking the size is how a small file becomes a large heap.
+    // 8 MB of one repeated character compresses to a few kilobytes. Decoding
+    // it whole before checking the size is how a small file becomes a large
+    // heap. A wall clock assertion would be flaky on a shared runner, so what
+    // is checked is that the read stopped: the title never comes back, because
+    // the closing tag is past the cap.
     const doc = await PDFDocument.load(await makeGoodPdf({ title: null }), { updateMetadata: false });
     const bomb = `<dc:title><rdf:li>${"a".repeat(8 * 1024 * 1024)}</rdf:li></dc:title>`;
     doc.catalog.set(
@@ -137,11 +144,11 @@ describe("the library's effect on its host", () => {
     const bytes = await doc.save();
     expect(bytes.length).toBeLessThan(200_000);
 
-    const started = Date.now();
     const report = await checkPdf(bytes);
-    expect(Date.now() - started).toBeLessThan(5_000);
     expect(report.readError).toBeUndefined();
-  });
+    expect(report.facts.title).toBeNull();
+    expect(report.issues.map((i) => i.check)).toContain("document-title");
+  }, 30_000);
 });
 
 describe("page identity", () => {

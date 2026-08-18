@@ -193,6 +193,8 @@ describe("exit codes", () => {
 });
 
 describe("output", () => {
+  // Writes 120 files and spawns the CLI over them, which is slow enough on a
+  // shared runner to need more than the 5s default.
   it("writes complete JSON to a pipe, however large", async () => {
     const many = join(dir, "many");
     await mkdir(many, { recursive: true });
@@ -206,7 +208,7 @@ describe("output", () => {
     const parsed = JSON.parse(result.stdout) as { reports: unknown[] };
     expect(parsed.reports).toHaveLength(120);
     expect(result.stdout.length).toBeGreaterThan(200_000);
-  });
+  }, 30_000);
 
   it("produces github annotations, one per line", async () => {
     const result = await cli(["broken.pdf", "--format", "github"]);
