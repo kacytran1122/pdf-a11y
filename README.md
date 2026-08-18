@@ -1,5 +1,7 @@
 # pdf-a11y
 
+[![npm version](https://img.shields.io/npm/v/pdf-a11y.svg)](https://www.npmjs.com/package/pdf-a11y)
+[![npm downloads](https://img.shields.io/npm/dm/pdf-a11y.svg)](https://www.npmjs.com/package/pdf-a11y)
 [![CI](https://github.com/kacytran1122/pdf-a11y/actions/workflows/ci.yml/badge.svg)](https://github.com/kacytran1122/pdf-a11y/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520.19-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
