@@ -1,9 +1,12 @@
 #!/usr/bin/env node
+import { createRequire } from "node:module";
 import { readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { CHECK_IDS, checkFile, profiles } from "./index.js";
 import { formatGithub, formatJson, formatPretty } from "./format.js";
 import type { CheckId, ProfileName, Report, Severity } from "./types.js";
+
+const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
 
 const SKIP_DIRS = new Set(["node_modules", ".git", "coverage", ".cache"]);
 
@@ -20,6 +23,7 @@ Options
   --max-warnings <n>  Exit 1 when warnings exceed n. Default: unlimited
   --quiet             Only report errors
   --checks            List every check and exit
+  --version           Print the version and exit
   --help              Show this help
 
 Examples
@@ -40,7 +44,7 @@ interface Cli {
   quiet: boolean;
 }
 
-function parseArgs(argv: string[]): Cli | { help: true } | { listChecks: true } {
+function parseArgs(argv: string[]): Cli | { help: true } | { listChecks: true } | { version: true } {
   const cli: Cli = {
     paths: [],
     profile: "recommended",
@@ -58,6 +62,9 @@ function parseArgs(argv: string[]): Cli | { help: true } | { listChecks: true } 
         return { help: true };
       case "--checks":
         return { listChecks: true };
+      case "--version":
+      case "-v":
+        return { version: true };
       case "--quiet":
         cli.quiet = true;
         break;
@@ -123,6 +130,10 @@ async function main(): Promise<void> {
 
   if ("help" in parsed) {
     console.log(HELP.trim());
+    return;
+  }
+  if ("version" in parsed) {
+    console.log(`pdf-a11y ${version}`);
     return;
   }
   if ("listChecks" in parsed) {
