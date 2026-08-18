@@ -51,7 +51,7 @@ export async function checkFiles(jobs: readonly FileJob[], options: RunOptions):
   // a slow file does not leave the other threads idle. A worker that dies takes
   // its driver back to the main thread rather than losing the file.
   const drive = async (): Promise<void> => {
-    let worker: Worker | null = null;
+    let worker: Worker | null;
     try {
       worker = new Worker(url);
       started.push(worker);

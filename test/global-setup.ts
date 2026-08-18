@@ -22,7 +22,7 @@ function newestMtime(dir: string): number {
  * output is already newer than the sources.
  */
 export default function setup(): void {
-  let built = 0;
+  let built: number;
   try {
     built = statSync(CLI).mtimeMs;
   } catch {

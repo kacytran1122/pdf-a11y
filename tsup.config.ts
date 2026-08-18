@@ -7,7 +7,7 @@ export default defineConfig([
     dts: true,
     clean: true,
     sourcemap: true,
-    target: "node18",
+    target: "node20",
     // tsup strips the `node:` prefix by default. Keeping it is what lets Deno,
     // Bun and edge bundlers resolve the builtins at all.
     removeNodeProtocol: false,
@@ -25,7 +25,7 @@ export default defineConfig([
     // No source map: nobody steps through a bin, and it is a third of the
     // published package.
     sourcemap: false,
-    target: "node18",
+    target: "node20",
     removeNodeProtocol: false,
   },
 ]);

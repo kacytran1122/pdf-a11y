@@ -125,7 +125,10 @@ regression test.
   tag, which carries no level.
 - `CHECK_IDS` is frozen. Mutating a library's exported constant was never
   supported; it now fails loudly instead of corrupting other consumers.
-- `engines.node` is `>=18.18`, which is what the toolchain actually requires.
+- **`engines.node` is now `>=20.19.0`.** Node 18 reached end of life in April
+  2025, and the current test and lint toolchain no longer runs on it. The
+  shipped code has no Node 20 requirement, so it will still execute on 18 — it
+  is simply no longer tested or supported there. CI covers Node 20, 22 and 24.
 - `pdf-a11y/browser` now resolves for CommonJS consumers and for `node10` style
   resolution. Previously `require("pdf-a11y/browser")` resolved to ESM.
 
