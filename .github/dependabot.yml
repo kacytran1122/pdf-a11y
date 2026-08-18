@@ -8,6 +8,12 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+    ignore:
+      # typescript-eslint peers on typescript <6.1.0, so a TypeScript 7 bump
+      # cannot even install and takes the whole grouped update down with it.
+      # Drop this once typescript-eslint supports TypeScript 7.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
