@@ -305,6 +305,14 @@ describe("engine", () => {
     expect([...pages].sort((a, b) => a - b)).toEqual(pages);
   });
 
+  it("puts errors above warnings so the worst finding is not buried", async () => {
+    const report = await checkPdf(await makePdf({ tagged: false }));
+    const severities = report.issues.map((i) => i.severity);
+    expect(severities).toEqual(["error", "error", "warn", "warn"]);
+    expect(report.issues[0]?.check).toBe("document-lang");
+    expect(report.issues[1]?.check).toBe("struct-tree");
+  });
+
   it("returns a read error instead of throwing on a file that is not a PDF", async () => {
     const report = await checkPdf(new TextEncoder().encode("this is not a pdf"));
     expect(report.readError ?? "").not.toBe("");

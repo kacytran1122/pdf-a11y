@@ -116,6 +116,9 @@ regression test.
   dominates.
 - The published package no longer carries a second copy of the checker for the
   command line: 103 kB → 75 kB packed, 421 kB → 302 kB unpacked.
+- Issues are ordered by page, then errors before warnings, then check id.
+  Sorting on the check id alone printed `struct-tree`, the finding that matters
+  most, underneath the warnings.
 - `figure-alt` also rejects `chart`, `diagram`, `none` and `n/a` as placeholder
   alt text.
 - `heading-order` understands `H1` through `H9` and ignores the unnumbered `H`

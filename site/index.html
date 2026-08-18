@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pdf-a11y — check whether your generated PDFs can actually be read</title>
-<meta name="description" content="pdfkit and puppeteer produce untagged PDFs by default. A screen reader announces them as one unbroken blob. pdf-a11y runs 12 checks in CI, mapped to PDF/UA and WCAG.">
+<meta name="description" content="pdfkit and puppeteer produce untagged PDFs by default. A screen reader announces them as one unbroken blob. pdf-a11y runs 13 checks in CI, mapped to PDF/UA and WCAG.">
 <meta name="theme-color" content="#EFEFEA">
 <meta property="og:type" content="website">
 <meta property="og:title" content="pdf-a11y — check whether your generated PDFs can actually be read">
-<meta property="og:description" content="Every invoice your service emails out is probably unreadable to a screen reader. 12 checks, one command, no Java.">
+<meta property="og:description" content="Every invoice your service emails out is probably unreadable to a screen reader. 13 checks, one command, no Java.">
 <meta property="og:url" content="https://pdf-a11y.dev/">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -308,7 +308,7 @@ footer a:hover{color:var(--ink)}
 
 <!-- ============ STATS ============ -->
 <section class="stats">
-  <div class="stat"><div class="n">12</div><div class="l">Checks</div></div>
+  <div class="stat"><div class="n">13</div><div class="l">Checks</div></div>
   <div class="stat"><div class="n">70M</div><div class="l">Monthly pdfkit + puppeteer installs</div></div>
   <div class="stat"><div class="n">0</div><div class="l">Java runtimes needed</div></div>
   <div class="stat"><div class="n">MIT</div><div class="l">Open source</div></div>
@@ -328,12 +328,12 @@ footer a:hover{color:var(--ink)}
 
 <b>invoice.pdf</b>
   <span class="meta">1 page  ·  untagged  ·  no lang  ·  0 images</span>
-  <span class="meta">doc</span>    <span class="err">error</span>  No structure tree. A screen reader reads this document as one
-                undifferentiated blob with no headings, lists or tables.
-                <span class="meta">struct-tree  PDF/UA 7.1, WCAG 1.3.1</span>
   <span class="meta">doc</span>    <span class="err">error</span>  No document language is set. A screen reader will fall back to
                 its own language and mispronounce the text.
                 <span class="meta">document-lang  WCAG 3.1.1</span>
+  <span class="meta">doc</span>    <span class="err">error</span>  No structure tree. A screen reader reads this document as one
+                undifferentiated blob with no headings, lists or tables.
+                <span class="meta">struct-tree  PDF/UA 7.1, WCAG 1.3.1</span>
   <span class="meta">doc</span>    <span class="wrn">warn </span>  No document title. Assistive technology announces the file name
                 instead, which is usually a generated string.
                 <span class="meta">document-title  WCAG 2.4.2</span>
@@ -394,7 +394,7 @@ footer a:hover{color:var(--ink)}
 
 <!-- ============ CHECKS ============ -->
 <section class="wrap section" id="checks">
-  <div class="eyebrow reveal">Twelve checks</div>
+  <div class="eyebrow reveal">Thirteen checks</div>
   <h2 class="reveal" style="font-size:clamp(28px,4.4vw,46px)">Every finding points at<br>a published clause.</h2>
   <p class="lede reveal">
     Two profiles. <code>recommended</code> is what a team can reasonably fix this sprint.
@@ -543,7 +543,7 @@ if (report.errorCount > 0) {
         <ul>
           <li><a href="https://www.npmjs.com/package/pdf-a11y">npm</a></li>
           <li><a href="https://github.com/kacytran1122/pdf-a11y">GitHub</a></li>
-          <li><a href="#checks">All 12 checks</a></li>
+          <li><a href="#checks">All 13 checks</a></li>
           <li><a href="#run">Install</a></li>
         </ul>
       </div>

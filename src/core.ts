@@ -193,7 +193,17 @@ export async function checkPdf(bytes: Uint8Array | ArrayBuffer, options: CheckOp
   };
 }
 
-/** Document order first, then a stable order within a page. */
+/**
+ * Document order first, then errors before warnings, then a stable order by
+ * check id. Sorting on the check id alone buried `struct-tree`, the finding
+ * that matters most, underneath the warnings.
+ */
+const RANK: Record<Issue["severity"], number> = { error: 0, warn: 1 };
+
 function byPageThenCheck(a: Issue, b: Issue): number {
-  return (a.page ?? 0) - (b.page ?? 0) || (a.check < b.check ? -1 : a.check > b.check ? 1 : 0);
+  return (
+    (a.page ?? 0) - (b.page ?? 0) ||
+    RANK[a.severity] - RANK[b.severity] ||
+    (a.check < b.check ? -1 : a.check > b.check ? 1 : 0)
+  );
 }
