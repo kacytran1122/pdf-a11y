@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.2
+
+### Documentation
+
+- Made the opening explanation easier for non-technical readers to understand.
+- Confirmed that the README contains no em dashes.
+
 ## 0.2.1
 
 ### Documentation

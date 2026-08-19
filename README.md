@@ -6,10 +6,10 @@
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520.19-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Make sure the PDFs your software creates can be read by everyone.**
+**Check whether everyone can read the PDFs your software creates.**
 
-A PDF can look perfect on a screen and still be almost useless to a person
-using a screen reader.
+A PDF can look perfect on a screen and still be hard or impossible to use with
+a screen reader.
 
 The problem is hidden inside the file. A heading may only _look_ like a
 heading. A table may have no real connection between its labels and values. An
