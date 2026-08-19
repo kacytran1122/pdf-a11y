@@ -6,181 +6,205 @@
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520.19-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Check whether the PDFs your code generates can actually be read.**
+**Make sure the PDFs your software creates can be read by everyone.**
 
-```bash
-npx pdf-a11y invoice.pdf
-```
+A PDF can look perfect on a screen and still be almost useless to a person
+using a screen reader.
 
-No installer. No licence. No Java.
-[pdf-a11y.dev](https://pdf-a11y.dev/) · [npm](https://www.npmjs.com/package/pdf-a11y)
+The problem is hidden inside the file. A heading may only _look_ like a
+heading. A table may have no real connection between its labels and values. An
+image may have no description. The reading order may be missing completely.
 
----
+`pdf-a11y` checks that hidden structure before the document reaches a customer.
 
-## Every invoice you generate is one long unbroken sentence
-
-`pdfkit` and `puppeteer` both produce **untagged** PDFs by default.
-
-An untagged PDF has no headings, no table structure and no reading order. On screen it looks
-perfect. To a screen reader it is a single blob of text: amounts drift away from their labels,
-column headers vanish, and there is no way to skip to a section.
-
-Your web app has `axe-core` in CI. Your PDFs have had nothing.
-
-**This is that check.**
+[View pdf-a11y on npm](https://www.npmjs.com/package/pdf-a11y)
 
 ## Try it in one command
 
+You do not need to install anything first:
+
 ```bash
 npx pdf-a11y invoice.pdf
 ```
 
-Here is a plain ten-line `pdfkit` invoice. Nothing was sabotaged to get this output — it is the
-out-of-the-box starting point for almost every Node service that emails a PDF:
+Example result:
 
-```
+```text
 invoice.pdf
-  1 page  ·  untagged  ·  no lang  ·  0 images
-  doc    error  No document language is set. A screen reader will fall back to
-                its own language and mispronounce the text.
-                document-lang  WCAG 3.1.1
-  doc    error  No structure tree. A screen reader reads this document as one
-                undifferentiated blob with no headings, lists or tables.
-                struct-tree  PDF/UA 7.1, WCAG 1.3.1
-  doc    warn   No document title. Assistive technology announces the file name
-                instead, which is usually a generated string.
-                document-title  WCAG 2.4.2
-  doc    warn   MarkInfo/Marked is not set to true, so the document does not
-                declare itself as tagged.
-                marked-content  PDF/UA 7.1
+  1 page · untagged · no language · 0 images
 
-2 errors, 2 warnings
+  error  No document language is set.
+  error  No structure tree. A screen reader sees one unbroken block.
+  warn   No document title.
+
+2 errors, 1 warning
 ```
 
-The command exits with code `1`, so it works as a gate anywhere you can run a command.
+The command returns a failure code when it finds a serious problem. That means
+it can stop an inaccessible document from being released by accident.
 
-## Why this matters now
+## Who is this for?
 
-The **European Accessibility Act** has applied since **28 June 2025**. It reaches customer-facing
-documents — invoices, statements, contracts, reports — for a wide range of services sold into the
-EU. Each member state sets its own penalties and its own enforcement body.
+- Teams that generate invoices, statements, contracts, tickets, or reports.
+- Products that create PDFs with tools such as pdfkit or Puppeteer.
+- Accessibility teams that need repeatable checks instead of manual spot checks.
+- Agencies that deliver documents for many clients.
+- Developers who want PDF checks in the same release process as website checks.
 
-The hard part was never the law. It was that teams had no way to check.
+You do not need to understand the PDF file format to use the command. The
+report explains each problem in ordinary language.
 
-| When  | What happened                                                                        |
-| ----- | ------------------------------------------------------------------------------------ |
-| 2001  | Tagged PDF arrives in PDF 1.4. Most generators still do not emit a structure tree.   |
-| 2012  | PDF/UA published as ISO 14289-1 — a precise definition of an accessible PDF.         |
-| 2025  | The European Accessibility Act reaches customer-facing documents, not just websites. |
-| Today | Your invoice pipeline has no check. One line in CI closes it.                        |
+## Why a normal visual check is not enough
 
-Web accessibility has had automated tooling for a decade. PDF accessibility had desktop software,
-paid services and Java command line tools — none of which fit into a Node build. This one runs
-with `npx`.
+A person looking at the document can see a title, columns, pictures, and a
+table. A screen reader does not see the page the same way. It relies on labels
+and relationships stored inside the PDF.
 
-## Install
+Without those details:
+
+- every paragraph may become one long sentence;
+- table values can lose their column names;
+- images are announced with no useful description;
+- form fields may have no name;
+- keyboard focus can move in a confusing order;
+- the reader may pronounce the document in the wrong language.
+
+`pdf-a11y` checks the file itself, not just a screenshot of the page.
+
+## What it checks
+
+| Human question                                                    | Check name           |
+| ----------------------------------------------------------------- | -------------------- |
+| Does the document have a real reading structure?                  | `struct-tree`        |
+| Can page content be connected back to that structure?             | `parent-tree`        |
+| Does the file say that its content is tagged?                     | `marked-content`     |
+| Does a screen reader know the document language?                  | `document-lang`      |
+| Does the document have a useful title?                            | `document-title`     |
+| Do meaningful images have descriptions?                           | `figure-alt`         |
+| Are there images that never appear in the reading structure?      | `untagged-image`     |
+| Do data cells have table headers?                                 | `table-headers`      |
+| Do headings follow a sensible order?                              | `heading-order`      |
+| Do links explain where they go?                                   | `link-alt`           |
+| Do form fields have names?                                        | `form-field-label`   |
+| Do security settings allow assistive technology to read the file? | `extraction-allowed` |
+| Does keyboard focus follow the document structure?                | `tab-order`          |
+
+Every finding points to a related PDF/UA or WCAG clause. The standard is there
+for teams that need it; the main message stays readable for everyone else.
+
+## Install it in a project
 
 ```bash
 npm install --save-dev pdf-a11y
 ```
 
-Node 20.19 or newer. One dependency, no native binaries, no Java.
+Node 20.19 or newer is required. The package has one runtime dependency,
+`pdf-lib`. It has no native binary and does not need Java.
 
-## Three ways to run it
+Add a script to `package.json`:
 
-### 1. On a file you already have
-
-Point it at a PDF, or at a folder full of them.
-
-```bash
-npx pdf-a11y invoice.pdf                  # one file
-npx pdf-a11y ./out                        # every PDF in a folder
-npx pdf-a11y ./out --profile pdf-ua       # strictest: every check is an error
-npx pdf-a11y invoice.pdf --format json    # machine readable
-npx pdf-a11y ./out --check tab-order=off  # turn one check off
-npx pdf-a11y ./out --quiet                # errors only
+```json
+{
+  "scripts": {
+    "check:pdf": "pdf-a11y ./out"
+  }
+}
 ```
 
-A folder is checked on one worker thread per CPU, up to eight. On forty files that is about
-**3.3x faster** than one at a time — see [Performance](#performance). `--concurrency 1` turns it
-off.
+Then run:
 
-| Exit code | Meaning                                                          |
-| --------: | ---------------------------------------------------------------- |
-|         0 | No errors                                                        |
-|         1 | An error, an unreadable file, or warnings above `--max-warnings` |
-|         2 | Bad usage — an unknown option, or a path that does not exist     |
+```bash
+npm run check:pdf
+```
 
-### 2. In CI, on the PDFs you actually ship
+## Three common ways to use it
 
-Generate the documents your service really sends, then check those. The `github` format puts each
-finding straight onto the pull request.
+### 1. Check a PDF that already exists
+
+```bash
+npx pdf-a11y invoice.pdf
+npx pdf-a11y ./out
+```
+
+A folder is checked in parallel, using up to eight worker threads.
+
+### 2. Check every release in GitHub Actions
+
+Generate the PDFs your product really sends, then check that folder:
 
 ```yaml
-- run: node scripts/generate-invoices.js
+- run: node scripts/create-invoices.js
 - run: npx pdf-a11y ./out --format github
 ```
 
-### 3. Before it ever touches disk
+Problems appear as GitHub annotations. A serious finding makes the workflow
+fail.
 
-`checkPdf` takes a `Uint8Array`, so a `puppeteer` buffer can be checked in the same function that
-created it.
+### 3. Check a PDF directly in code
 
 ```js
 import { checkPdf } from "pdf-a11y";
 
-const bytes = await page.pdf(); // puppeteer
+const bytes = await page.pdf();
 const report = await checkPdf(bytes);
 
 if (report.errorCount > 0) {
-  throw new Error("This PDF is not accessible.");
+  throw new Error("The PDF needs accessibility fixes.");
 }
 ```
 
-Or from a path, in Node:
+For a file already on disk:
 
 ```js
 import { checkFile } from "pdf-a11y";
 
-const report = await checkFile("invoice.pdf", { profile: "pdf-ua" });
+const report = await checkFile("invoice.pdf");
 
-for (const issue of report.issues) {
-  console.log(issue.page ?? "doc", issue.check, issue.message);
+for (const problem of report.issues) {
+  console.log(problem.page ?? "document", problem.check, problem.message);
 }
 ```
 
-Neither function ever throws. A file that is damaged, truncated, encrypted, hostile or simply not
-a PDF comes back as a report with `readError` set, so one bad file cannot take down a batch.
+In a browser or edge runtime, import from `pdf-a11y/browser`. It provides the
+same in-memory checker without the file-system functions.
 
-## The 13 checks
+## Choose how strict to be
 
-Every finding points at a published clause. There are two profiles: `recommended` is what a team
-can reasonably fix this sprint, `pdf-ua` turns everything into an error. Any check can be switched
-off on its own.
+The default `recommended` profile separates serious errors from useful
+warnings. It is designed for a team starting to improve its PDFs.
 
-| Check                | Default | Clause                 | What it catches                                                                   |
-| -------------------- | ------- | ---------------------- | --------------------------------------------------------------------------------- |
-| `struct-tree`        | error   | PDF/UA 7.1, WCAG 1.3.1 | No tag tree at all. The one that matters most.                                    |
-| `document-lang`      | error   | WCAG 3.1.1             | Missing or malformed `/Lang`, so the reader guesses the language                  |
-| `figure-alt`         | error   | PDF/UA 7.3, WCAG 1.1.1 | Figure with no alt text, or alt text like `image` or `chart.png`                  |
-| `table-headers`      | error   | PDF/UA 7.5, WCAG 1.3.1 | Table with data cells but no header cells, so values lose their column            |
-| `form-field-label`   | error   | PDF/UA 7.18.4          | Form field with no `/TU` tooltip, which is its accessible name                    |
-| `marked-content`     | warn    | PDF/UA 7.1             | `MarkInfo/Marked` not true, or `Suspects` true                                    |
-| `document-title`     | warn    | WCAG 2.4.2             | No title in the info dictionary or XMP, or a title viewers will not display       |
-| `parent-tree`        | warn    | PDF/UA 7.1             | Tagged document with no `/ParentTree` to map content back to its tags             |
-| `untagged-image`     | warn    | WCAG 1.1.1             | More images on the page than Figure elements in the tree                          |
-| `heading-order`      | warn    | WCAG 1.3.1             | Heading levels skip, or the document does not start at H1                         |
-| `link-alt`           | warn    | PDF/UA 7.18.5          | Link annotation with no description of where it goes                              |
-| `tab-order`          | warn    | PDF/UA 7.18.3          | Page has annotations but no `/Tabs /S`, so keyboard order is arbitrary            |
-| `extraction-allowed` | warn    | PDF/UA 7.1             | Encryption permission flags that block assistive technology from reading anything |
+The `pdf-ua` profile treats all 13 checks as required:
 
-Run `pdf-a11y --checks` to print this table with both profiles.
+```bash
+npx pdf-a11y ./out --profile pdf-ua
+```
 
-## Beyond pass and fail
+You can also change one check:
 
-Every report also carries a `facts` object, including a count of **every structure tag in the
-document**. This is often the most useful part: authors are regularly surprised to learn their
-template emits two hundred paragraphs and not a single heading.
+```bash
+npx pdf-a11y invoice.pdf --check tab-order=off
+```
+
+Other useful commands:
+
+```bash
+pdf-a11y invoice.pdf --format json    # output for another program
+pdf-a11y ./out --format github       # GitHub annotations
+pdf-a11y ./out --quiet               # show errors only
+pdf-a11y ./out --concurrency 1       # check one file at a time
+pdf-a11y --checks                    # list all 13 checks
+```
+
+| Exit code | Meaning                                                             |
+| --------: | ------------------------------------------------------------------- |
+|         0 | No blocking problem was found                                       |
+|         1 | A blocking problem, unreadable file, or too many warnings was found |
+|         2 | The command was used incorrectly                                    |
+
+## What the report tells you
+
+The result is more than pass or fail. It includes useful facts about the
+document:
 
 ```jsonc
 {
@@ -189,137 +213,83 @@ template emits two hundred paragraphs and not a single heading.
   "lang": "vi",
   "title": "Hóa đơn 2026-0142",
   "images": 3,
-  "figures": 1, // two images never made it into the tree
-  "tags": { "P": 212, "Table": 2, "TD": 48, "Figure": 1 }, // no H1, no TH: the structure is flat
+  "figures": 1,
+  "tags": {
+    "P": 212,
+    "Table": 2,
+    "TD": 48,
+    "Figure": 1,
+  },
 }
 ```
 
-The full result:
+In this example, the file contains three images but only one is represented as
+a figure. It has tables and data cells but no table-header tags. Those facts
+help a team understand the shape of the problem instead of only seeing a red
+or green result.
 
-```ts
-{
-  file: string;
-  issues: Issue[];
-  errorCount: number;
-  warningCount: number;
-  facts: {
-    pages: number;
-    marked: boolean;
-    tagged: boolean;
-    lang: string | null;
-    title: string | null;
-    images: number;
-    figures: number;
-    tags: Record<string, number>;
-    encrypted: boolean;
-  };
-  limitations?: string[];  // what this run could not determine
-  readError?: string;      // set instead of throwing
-}
-```
+If a damaged or encrypted file hides information, the report includes a
+`limitations` note. The tool says what it could not determine rather than
+pretending the file passed.
 
-`limitations` is how the checker admits what it could not see. An encrypted document cannot have
-its text decoded, so its title and alt text are checked for presence but never judged on content —
-and it says so, rather than reporting a pass.
+## What it cannot promise
 
-### Options
+No automatic checker can certify that a PDF is fully accessible. Human review
+still matters.
 
-```ts
-await checkPdf(bytes, {
-  profile: "pdf-ua", // or "recommended", the default
-  checks: { "tab-order": "off" }, // per check severity
-  limits: { maxNodes: 500_000, maxDepth: 100_000 }, // bounds on the tree walk
-  onParserWarning: (message) => log(message), // complaints about a damaged file
-});
+- It can confirm that a reading order exists, but not that the order makes sense.
+- It can catch missing or placeholder image descriptions, but not judge whether
+  a real description is helpful.
+- It does not check colour contrast because that requires looking at the
+  rendered page.
+- It reports problems; it does not rewrite the PDF. The best fix is usually in
+  the code or template that created the document.
+- It does not break encryption. When text cannot be read, the report says so.
+- Decorative images still count as image objects, which is why that check is a
+  warning by default.
 
-await checkFile("invoice.pdf", { maxBytes: 50 * 1024 * 1024 });
-```
+Use the tool to catch repeatable structural problems, then ask a person using
+assistive technology to test important document journeys.
 
-In a browser or an edge runtime, import `pdf-a11y/browser`. It is the same checker without the
-file-system entry point.
+## Designed for untrusted files
 
-## What it cannot do
+PDFs may come from customers or other systems, so the checker treats them as
+untrusted input.
 
-No automated tool can certify a PDF as accessible, and anything claiming otherwise is selling you
-something. These are the edges, stated plainly.
-
-- **Reading order.** It can tell you an order exists. It cannot tell you the order makes sense. A
-  tag tree in the wrong sequence still passes.
-- **Alt text quality.** It catches the mechanical failures — empty, whitespace, a file name, or a
-  placeholder word like `image`. Whether a real sentence describes the picture well needs a person.
-- **Colour contrast.** Out of scope: contrast needs the rendered page, and this reads the object
-  graph underneath it.
-- **Repair.** It reports, it does not rewrite. Fixing means changing the generator, which is where
-  the structure has to come from anyway.
-- **Encrypted text.** Encryption is ignored rather than broken, so strings stay unreadable.
-  Presence is checked, content is not, and the report says so in `limitations`.
-- **`untagged-image` counts image objects, not drawn images.** An image marked as decoration still
-  counts, which is why it is a warning and not an error.
-
-Role maps are applied, so a document that renames the standard tags is read correctly rather than
-reported as broken.
-
-## Hostile input
-
-The files this reads come from somewhere else, so they are treated as hostile.
-
-- `checkPdf` and `checkFile` **never throw**. Anything unreadable comes back as `readError`.
-- The structure tree is walked **iteratively and with a budget**, so a document nested tens of
-  thousands of levels deep neither overflows the stack nor runs forever. Cycles and shared
-  subtrees are visited once.
-- Text taken from a document is **stripped of control characters and truncated** before it reaches
-  a message, so a PDF cannot inject escape sequences into your terminal or a newline into a GitHub
-  annotation.
-- A structure tag named `__proto__` is **data, not a prototype write**.
-- `checkFile` refuses files above 512 MB unless you raise `maxBytes`.
+- A damaged or non-PDF file returns a `readError` instead of crashing the process.
+- Deep, circular, or repeated structures have safety limits.
+- Text from the file is cleaned before it reaches the terminal or GitHub.
+- Files above 512 MB are refused by default.
+- One broken file does not stop the rest of a folder from being checked.
 
 See [SECURITY.md](SECURITY.md) for the full threat model.
 
 ## Performance
 
-Measured on an Apple M4 Pro (15 cores), Node 24.18, comparing a build of v0.1.0 against v0.2.0 in
-the same session. Reproduce with the harness in [`bench/`](bench/).
+Checking a folder uses several worker threads by default. In the project's
+repeatable 40-document test, version 0.2.0 processed the folder about **3.3
+times faster** than version 0.1.0 on the same machine.
 
-**Checking a folder** of forty generated reports, seven runs, wall clock for the whole command:
-
-|            |       v0.1.0 |       v0.2.0 |   Change |
-| ---------- | -----------: | -----------: | -------: |
-| Mean       |      1510 ms |       458 ms | **-70%** |
-| Median     |      1509 ms |       454 ms |     -70% |
-| p95        |      1519 ms |       474 ms |     -69% |
-| Throughput | 26.5 files/s | 87.4 files/s | **3.3x** |
-
-**The analysis itself**, with parsing excluded — the part this project owns. Forty iterations per
-document:
-
-| Document                          |   v0.1.0 |   v0.2.0 |   Change |
-| --------------------------------- | -------: | -------: | -------: |
-| 500 page tagged report            | 33.10 ms | 10.34 ms | **-69%** |
-| 50 page tagged report             |  3.36 ms |  1.20 ms |     -64% |
-| 10,000 cell table                 | 15.57 ms |  6.72 ms |     -57% |
-| 200 deep nested tables            |  6.73 ms |  1.18 ms | **-82%** |
-| Structure tree nested 20,000 deep |    crash | 13.13 ms |    fixed |
-
-End-to-end times move far less, because parsing is roughly 90% of the work on a large file. That
-is the honest ceiling on single-file latency, and it is why checking a folder went to worker
-threads instead.
+The benchmark code and test documents are in [bench/](bench/). Performance
+numbers are a guide, not a promise for every computer or PDF.
 
 ## Contributing
 
 ```bash
 npm ci
-npm run check   # format, lint, types, tests with coverage, build, package checks
+npm run check
 ```
 
-Everything `npm run check` runs is also a CI gate, and CI is a release gate. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for the bar a change has to clear, and
-[CHANGELOG.md](CHANGELOG.md) for what has moved.
+That command checks formatting, code quality, types, tests, coverage, the
+build, and the published package shape. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the project rules and
+[CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Related
 
-Use with [`motion-a11y`](https://www.npmjs.com/package/motion-a11y) for animation accessibility,
-and `axe-core` for the rendered page.
+Use [motion-a11y](https://www.npmjs.com/package/motion-a11y) for animation
+accessibility and `axe-core` for accessibility checks on rendered web pages.
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE).
+MIT. Use it for personal or commercial projects.
