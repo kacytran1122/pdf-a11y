@@ -1,6 +1,6 @@
 {
   "name": "pdf-a11y",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Accessibility checker for generated PDFs. Verifies tag tree, alt text, language, table headers and reading structure so PDFs from pdfkit or puppeteer are usable by a screen reader.",
   "keywords": [
     "pdf",

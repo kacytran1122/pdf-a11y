@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.1
+
+### Documentation
+
+- Rewrote the npm README in plain language so non-technical readers can
+  understand why a PDF can look correct while still failing screen-reader
+  users.
+
 ## 0.2.0
 
 A correctness, robustness and throughput release. Every bug below has a
